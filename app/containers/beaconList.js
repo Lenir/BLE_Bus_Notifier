@@ -116,23 +116,35 @@ export default class BeaconList extends Component {
      didExit = DeviceEventEmitter.addListener(
        'regionDidExit',
        ({ identifier, uuid, minor, major }) => {
-         // good place for background tasks
-        //  console.log('monitoring - regionDidExit data: ', { identifier, uuid, minor, major });
+         if({ identifier, uuid, minor, major }==null){
+           console.log('beacon data not received');
+         }else {
+           // good place for background tasks
+          //  console.log('monitoring - regionDidExit data: ', { identifier, uuid, minor, major });
 
-        //  const time = moment().format(TIME_FORMAT);
-        this.renderItems(data.beacons[0])
-        this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
+          //  const time = moment().format(TIME_FORMAT);
+          this.renderItems(data.beacons[0])
+          this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
+        }
        }
      );
      didRange = DeviceEventEmitter.addListener(
        'beaconsDidRange',
        (data) => {
-         // good place for background tasks
-         console.log('monitoring - regionDidExit data: ');
-         this.setState({
-          dataSource :  this.state.dataSource.cloneWithRows(data.beacons),
-        });
-        this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
+         if(data.beacons.length==0){
+           console.log('beacon data not received');
+           this.setState({
+            dataSource :  this.state.dataSource.cloneWithRows(data.beacons),
+           });
+         }else {
+           // good place for background tasks
+           console.log('monitoring - didRange data: ');
+           console.log(data)
+           this.setState({
+            dataSource :  this.state.dataSource.cloneWithRows(data.beacons),
+          });
+          this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
+        }
        }
      );
     intervalId = BackgroundTimer.setInterval(() => {
