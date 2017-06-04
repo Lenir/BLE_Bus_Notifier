@@ -1,4 +1,8 @@
-
+/**
+ * 2017 PNU CSE Capstone Design - BLE Bus Notifier
+ * Cheolsu Park
+ * Bus Detail Scene, Main Functional Scene. includes side menu
+ */
 import React, {Component} from 'react';
 import {
   ActivityIndicator,
@@ -32,6 +36,7 @@ import {
   ListItem,
   SideMenu,
   Button,
+  Divider,
 } from 'react-native-elements';
 import {
   Scene,
@@ -45,6 +50,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons'
 import PushNotification from 'react-native-push-notification'
 import Beacons from 'react-native-beacons-manager'
 import BackgroundTimer from 'react-native-background-timer'
+import * as Progress from 'react-native-progress'
+
+// imports - style sheet
+import StyleCatalog from '../styleCatalog'
 
 // imports - Constants
 import BeaconConstants from './beaconConstants'
@@ -72,13 +81,18 @@ export default class BusDetail extends Component {
          beaconMinor : "",
          busName: "",
          curStop: "",
-         nextStop:"",
-         elList:'',
-         dest:-1,
-         remainStop:-1,
+         nextStop: "",
+         startStop: "",
+         isStartSet: false,
+         elList: '',
+         dest: -1,
+         remainStop: -1,
+         remainMessage: "목적지가 정해지지 않았습니다.",
+         progressPercent: 0,
          isOpen: false,
          isNotified2: false,
          isNotified1: false,
+         isNotified0: false,
          dataSource: new ListView.DataSource({
             rowHasChanged: (row1, row2) => row1 !== row2,
          }),
@@ -165,42 +179,100 @@ export default class BusDetail extends Component {
       }
 
     }
-    // Refresh State by received beacon data. use for beacon event listener.
+    // Refresh State and Alert, Notift by received beacon data. use for beacon event listener.
     refreshState(beaconData){
       if(beaconData.beacons.length==0){
         console.log('beacon data not received');
       }else {
         console.log('beacon data not received');
         console.log(beaconData)
+        if(!this.state.isStartSet){
+          this.setState({
+            startStop:beaconData.beacons[0].minor,
+            isStartSet:true,
+          })
+        }
         this.setState({
-         beaconId:beaconData.beacons[0].uuid,
-         beaconMajor:beaconData.beacons[0].major,
+         beaconId: beaconData.beacons[0].uuid,
+         beaconMajor: beaconData.beacons[0].major,
          beaconMinor: beaconData.beacons[0].minor,
-         curStop:BusConstants.busStops[this.state.busName][parseInt(beaconData.beacons[0].minor,10)],
-         nextStop:BusConstants.busStops[this.state.busName][parseInt(beaconData.beacons[0].minor,10)+1],
-         remainStop:parseInt(this.state.dest,10) - parseInt(beaconData.beacons[0].minor,10),
-        });
+         curStop: BusConstants.busStops[this.state.busName][parseInt(beaconData.beacons[0].minor,10)],
+         nextStop: BusConstants.busStops[this.state.busName][parseInt(beaconData.beacons[0].minor,10)+1],
+         remainStop: parseInt(this.state.dest,10) - parseInt(beaconData.beacons[0].minor,10),
+        })
+        if(this.state.nextStop==null){
+          this.setState({
+            nextStop: "마지막 정류장 입니다."
+          })
+        }
+        if(this.state.remainStop>0){ //if Dest is setted
+          this.setState({
+            remainMessage:"목적지까지 "+this.state.remainStop+"정류장 남았습니다.",
+            progressPercent: (parseInt(this.state.dest,10) - parseInt(this.state.startStop,10) - parseInt(this.state.remainStop,10))/(parseInt(this.state.dest,10) - parseInt(this.state.startStop,10))
+          })
+        }else if(this.state.remainStop==0){
+          this.setState({
+            remainMessage:"목적지에 도착하였습니다.",
+            progressPercent: (parseInt(this.state.dest,10) - parseInt(this.state.startStop,10) - parseInt(this.state.remainStop,10))/(parseInt(this.state.dest,10) - parseInt(this.state.startStop,10))
+          })
+        }
         if(this.state.remainStop<3){
           if(this.state.remainStop==2 && !this.state.isNotified2){
+            // Foreground Alert
+            Alert.alert(
+              '알림',
+              '목적지까지 2 정류장 남았습니다.',
+              [
+                {text:'확인'},
+              ]
+            )
             // notify remain stop is 2
             this.push1sec(this.state.isNotified2,"목적지까지 2 정거장 남았습니다.")
             // and same notify no more
             this.setState({isNotified2:!this.state.isNotified2})
           }
           if(this.state.remainStop==1 && !this.state.isNotified1){
+            // Foreground Alert
+            Alert.alert(
+              '알림',
+              '다음 정류장이 목적지입니다!',
+              [
+                {text:'확인'},
+              ]
+            )
             // notify that next stop is destination
             this.push1sec(this.state.isNotified1,"다음 정류장이 목적지입니다!")
             // and same notify no more
             this.setState({isNotified1:!this.state.isNotified1})
           }
+          if(this.state.remainStop==0 && !this.state.isNotified0){
+            // Foreground Alert
+            Alert.alert(
+              '알림',
+              '목적지에 도착하였습니다!',
+              [
+                {text:'확인'},
+              ]
+            )
+            // notify that next stop is destination
+            this.push1sec(this.state.isNotified0,"목적지에 도착하였습니다!")
+            // and same notify no more
+            this.setState({isNotified0:!this.state.isNotified0})
+          }
         }
       }
     }
     componentWillUnmount(){
+      const region = {
+          identifier: beaconId,
+          uuid: beaconUuid,
+          major: this.props.major,
+      }
+    // Stop Background work on Beacons
       // stop monitoring beacons:
-      Beacons.stopMonitoringForRegion();
+      Beacons.stopMonitoringForRegion(region);
       // stop ranging beacons:
-      Beacons.stopRangingBeaconsInRegion();
+      Beacons.stopRangingBeaconsInRegion(region);
       // stop updating locationManager:
       Beacons.stopUpdatingLocation();
       // remove monitoring events we registered at componentDidMount
@@ -208,6 +280,9 @@ export default class BusDetail extends Component {
       DeviceEventEmitter.removeListener('regionDidExit');
       // remove ranging event we registered at componentDidMount
       DeviceEventEmitter.removeListener('beaconsDidRange');
+
+      // stop backgrond Timer
+      BackgroundTimer.stop();
     }
     componentDidMount(){
       // setState - Bus Name
@@ -217,9 +292,9 @@ export default class BusDetail extends Component {
       // setState - Bus stops
       this.setState({
        dataSource :  this.state.dataSource.cloneWithRows(BusConstants.busStops[BusConstants.busName[parseInt(this.props.major,10)]]),
-     });
-     // setState - List
-     this.setState({elList:BusConstants.busStops[this.state.busName]})
+      })
+      // setState - List
+      this.setState({elList:BusConstants.busStops[this.state.busName]})
       // Event Listener - Beacon Region Entered
       didEnter = DeviceEventEmitter.addListener(
         'regionDidEnter',
@@ -247,32 +322,6 @@ export default class BusDetail extends Component {
        console.log('tics');
      }, 10000);
     }
-    // refreshDest(dst){
-    //   this.setState({
-    //     dest:dst
-    //   })
-    // }
-    // renderStops(busStops){
-    //   // var busName = BusConstants.busName[parseInt(detectedBeacon.major,10)];
-    //   // var curStop = BusConstants.busStops[busName][parseInt(detectedBeacon.minor,10)]
-    //   var fontSz = 15
-    //   var fontWt = 'normal'
-    //   if(dest==busStops){
-    //     fontSz = 25,
-    //     fontWt = 'bold'
-    //   }
-    //   return(
-    //     <TouchableOpacity onPress={ () =>{
-    //       dest = busStops
-    //      }}>
-    //       <View style={{margin:5}}>
-    //         <Text style={{color:'#9e9e9e',fontSize:fontSz,fontWeight:fontWt}}>{busStops}</Text>
-    //       </View>
-    //       <View style={styles.separator}/>
-    //     </TouchableOpacity>
-    //
-    //   );
-    // }
   render() {
     // Side Menu Component
     const elList = BusConstants[(BusConstants.busName[parseInt(this.props.major,10)])]
@@ -287,8 +336,19 @@ export default class BusDetail extends Component {
           elList.map((l, i) => (
             <ListItem
               onPress={() => {
-                this.setState({dest:i}),
-                this.toggleSideMenu()
+                if(i>this.state.beaconMinor){
+                  this.setState({dest:i}),
+                  this.toggleSideMenu()
+                }else{
+                  // Cannot set destination behind of current stop
+                  Alert.alert(
+                    '오류!',
+                    '목적지를 현위치 이전으로 정할 수 없습니다!',
+                    [
+                      {text:'확인'},
+                    ]
+                  )
+                }
               }}
               key={i}
               title={l.name}
@@ -308,51 +368,75 @@ export default class BusDetail extends Component {
           />
       </View>
     )
-    console.log("Props", this.props, this.state);
-    //testing elements-list
-    // const elList = [{name:"장전동어린이놀이터"},{name:"장전중앙교회"},{name:"부산대학교정문"},
-    // {name:"부산대학교후문"},{name:"금정초등학교"},{name:"온천장역"},{name:"온천장아스타아파트"}]
-
+    console.log("Props", this.props, this.state)
     return (
       <SideMenu
         isOpen={this.state.isOpen}
         onChange={this.onSideMenuChange.bind(this)}
         menu={MenuComponent}>
-        <View style={styles.container}>
+        <View style={StyleCatalog.container}>
           <Grid containerStyle={{alignItems:'center'}}>
-            <Col>
-              <Col containerStyle={{alignItems:'center'}}>
-                <Text style={{color:'#9e9e9e',fontSize:35,margin:20,marginTop:50}}>
-                  {this.state.busName}
-                </Text>
+            <Col containerStyle={{alignItems:'center'}}>
+              <Col size={1}>
               </Col>
-              <Col containerStyle={{alignItems:'center'}}>
-                <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginTop:20}}>dest:{this.state.dest}</Text>
-                <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginBottom:20}}>cur:{this.state.curStop}</Text>
-                <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginBottom:20}}>next:{this.state.nextStop}</Text>
-                <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginBottom:20}}>remain:{this.state.remainStop}</Text>
-              </Col>
-              <Col>
+              <Col containerStyle={{alignItems:'center'}} size={4}>
+              <Button
+                large
+                icon={{name: 'bus', type: 'material-community'}}
+                backgroundColor='#c4dbff'
+                containerViewStyle={{width:330}}
+                fontSize={35}
+                fontWeight='bold'
+                title= {this.state.busName+" 버스"} />
+                <Progress.Bar progress={this.state.progressPercent} borderWidth={0} unfilledColor={"#c4dbff"} width={330} height={10} color={"#9ec3ff"} borderRadius={0} />
                 <Button
-                  raised
+                  backgroundColor='#9ec3ff'
+                  fontSize={15}
+                  containerViewStyle={{width:330}}
+                  title= "이번 정류장" />
+                <Button
+                  large
+                  icon={{name: 'chevron-right', type: 'material-community'}}
+                  backgroundColor='#9ec3ff'
+                  containerViewStyle={{width:330}}
+                  fontSize={25}
+                  fontWeight='bold'
+                  title= {this.state.curStop} />
+                <Button
+                  backgroundColor='#87b4ff'
+                  fontSize={15}
+                  containerViewStyle={{width:330}}
+                  title= "다음 정류장" />
+                <Button
+                  large
+                  icon={{name: 'chevron-double-right', type: 'material-community'}}
+                  backgroundColor='#87b4ff'
+                  fontWeight='bold'
+                  containerViewStyle={{width:330}}
+                  title= {this.state.nextStop} />
+                <Button
+                  large
+                  icon={{name: 'alarm-check', type: 'material-community'}}
+                  backgroundColor='#6ba1ff'
+                  containerViewStyle={{width:330}}
+                  fontWeight='bold'
+                  title= {this.state.remainMessage} />
+                <Button
                   icon={{name: 'cached'}}
-                  title='BUTTON WITH ICON'
+                  title='목적지 설정'
+                  containerViewStyle={{width:330}}
+                  backgroundColor='#3d84ff'
                   onPress={()=>{
                     this.toggleSideMenu()
-                }}/>
+                  }}/>
               </Col>
-              <Row>
+              <Col size={1}>
                 <TouchableOpacity style={{margin:10}} onPress={ () =>{
                   Actions.pop()
                  }}>
                   <Ionicons size={30} name="ios-undo" color="#9e9e9e" />
                 </TouchableOpacity>
-                <TouchableOpacity style={{margin:10}} onPress={ () =>{
-                  Actions.sideDrawer()
-                 }}>
-                  <Ionicons size={30} name="ios-undo" color="#9e9e9e" />
-                </TouchableOpacity>
-              </Row>
+              </Col>
             </Col>
           </Grid>
         </View>
@@ -360,24 +444,3 @@ export default class BusDetail extends Component {
     );
   }
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5FCFF',
-    flexDirection: 'row',
-  },
-  wrapper: {
-    backgroundColor: 'white'
-  },
-  separator:{
-    flex:1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#9E9E9E'
-  },
-  button: {
-    padding: 5,
-    backgroundColor: 'white'
-  },
-});

@@ -1,7 +1,12 @@
+/**
+ * 2017 PNU CSE Capstone Design - BLE Bus Notifier
+ * Cheolsu Park
+ * Aysnchronous Storage(SQLite) Functions
+ */
 import { AsyncStorage }from 'react-native';
 export default class AsyncStor {
   // Async Storage Print - input : key, output : setState( printIten : OUTPUT )
-  String printItem(key){
+  printItem(key){
     try {
       const value = AsyncStorage.getItem(key,(err, result) => {
         if(result==null){

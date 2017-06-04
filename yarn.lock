@@ -3088,6 +3088,12 @@ react-native-experimental-navigation@0.27.x:
     clamp "^1.0.1"
     fbjs "^0.8.1"
 
+react-native-progress@^3.2.1:
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/react-native-progress/-/react-native-progress-3.2.1.tgz#9f2353045c49f06803ae04d86a2cd5baa83cd465"
+  dependencies:
+    prop-types "^15.5.8"
+
 react-native-push-notification@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/react-native-push-notification/-/react-native-push-notification-3.0.0.tgz#00282ea656443e89df6057f14b10500e7b89551f"

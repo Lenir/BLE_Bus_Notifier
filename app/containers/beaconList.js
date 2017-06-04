@@ -1,7 +1,7 @@
 /**
- * 2017 Capstone Design - BLE Bus Notifier
+ * 2017 PNU CSE Capstone Design - BLE Bus Notifier
  * Cheolsu Park
- * Beacon List Scene
+ * Beacon List Scene, First Scene
  */
 
  // imports - react, react-native.
@@ -43,6 +43,9 @@
  import Beacons from 'react-native-beacons-manager'
  import BackgroundTimer from 'react-native-background-timer'
 
+// imports - style sheet
+import StyleCatalog from '../styleCatalog'
+
 // imports - Constants
 import BeaconConstants from './beaconConstants'
 import BusConstants from './busConstants'
@@ -72,6 +75,7 @@ export default class BeaconList extends Component {
          beaconId : "",
          beaconMajor : "",
          beaconMinor : "",
+         firstDetected : true,
          dataSource : new ListView.DataSource({
             rowHasChanged: (row1, row2) => row1 !== row2,
         }),
@@ -144,12 +148,38 @@ export default class BeaconList extends Component {
             dataSource :  this.state.dataSource.cloneWithRows(data.beacons),
           });
           this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
+          if(data.beacons.length==1 && this.state.firstDetected){
+            // when ranged beacon is just one, automatically go to bus information.
+            this.setState({
+              firstDetected : false,
+            })
+            Actions.busDetail({
+              major : data.beacons[0].major,
+            })
+          }
         }
        }
      );
     intervalId = BackgroundTimer.setInterval(() => {
       console.log('tics');
     }, 10000);
+   }
+   componentWillUnmount(){
+     // Stop Background work on Beacons
+     // stop monitoring beacons:
+     Beacons.stopMonitoringForRegion(region);
+     // stop ranging beacons:
+     Beacons.stopRangingBeaconsInRegion(region);
+     // stop updating locationManager:
+     Beacons.stopUpdatingLocation();
+     // remove monitoring events we registered at componentDidMount
+     DeviceEventEmitter.removeListener('regionDidEnter');
+     DeviceEventEmitter.removeListener('regionDidExit');
+     // remove ranging event we registered at componentDidMount
+     DeviceEventEmitter.removeListener('beaconsDidRange');
+
+     // stop backgrond Timer
+    //  BackgroundTimer.stop();
    }
   // Async Storage Print - input : key, output : setState( printIten : OUTPUT )
   printItem(){
@@ -209,7 +239,7 @@ export default class BeaconList extends Component {
           <Text style={{color:'#9e9e9e',fontSize:15,fontWeight:'bold'}}>Minor</Text>
           <Text style={{color:'#9e9e9e',fontSize:15}}>  {curStop}</Text>
         </View>
-        <View style={styles.separator}/>
+        <View style={StyleCatalog.separator}/>
 
       </TouchableOpacity>
 
@@ -237,7 +267,7 @@ export default class BeaconList extends Component {
           <Text style={{color:'#9e9e9e',fontSize:15,fontWeight:'bold'}}>현재 위치</Text>
           <Text style={{color:'#9e9e9e',fontSize:15}}>  {curStop}</Text>
         </View>
-        <View style={styles.separator}/>
+        <View style={StyleCatalog.separator}/>
 
       </TouchableOpacity>
 
@@ -264,24 +294,3 @@ export default class BeaconList extends Component {
     );
   }
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5FCFF',
-    flexDirection: 'row',
-  },
-  wrapper: {
-    backgroundColor: 'white'
-  },
-  separator:{
-    flex:1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#9E9E9E'
-  },
-  button: {
-    padding: 5,
-    backgroundColor: 'white'
-  },
-});
