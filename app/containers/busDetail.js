@@ -54,7 +54,7 @@ import DestSet from './destSet';
 
 var beaconId = BeaconConstants.identifier;
 var beaconUuid = BeaconConstants.uuid;
-var dest = -1;
+// var dest = -1;
 
 // Platform EventEmitter Select
 const EventEmitter = Platform.select({
@@ -77,11 +77,54 @@ export default class BusDetail extends Component {
          dest:-1,
          remainStop:-1,
          isOpen: false,
+         isNotified2: false,
+         isNotified1: false,
          dataSource: new ListView.DataSource({
             rowHasChanged: (row1, row2) => row1 !== row2,
          }),
         }
         this.toggleSideMenu = this.toggleSideMenu.bind(this)
+        this.pushConfig()
+    }
+    // Push Notification configure
+    pushConfig(){
+      PushNotification.configure({
+       // (optional) Called when Token is generated (iOS and Android)
+       onRegister: function(token) {
+           console.log( 'TOKEN:', token );
+       },
+       // (required) Called when a remote or local notification is opened or received
+       onNotification: function(notification) {
+           console.log( 'NOTIFICATION:', notification );
+       },
+       // ANDROID ONLY: GCM Sender ID (optional - not required for local notifications, but is need to receive remote push notifications)
+       senderID: "YOUR GCM SENDER ID",
+       // IOS ONLY (optional): default: all - Permissions to register.
+       permissions: {
+           alert: true,
+           badge: true,
+           sound: true
+       },
+       // Should the initial notification be popped automatically
+       // default: true
+       popInitialNotification: true,
+       /**
+         * (optional) default: true
+         * - Specified if permissions (ios) and token (android and ios) will requested or not,
+         * - if not, you must call PushNotificationsHandler.requestPermissions() later
+         */
+       requestPermissions: true,
+       });
+    }
+    // Push after 1 sec
+    push1sec(isPushed,message) {
+      if(!isPushed){
+        PushNotification.localNotificationSchedule({
+          foreground: true,
+          message: message, // (required)
+          date: new Date(Date.now() + (1 * 1000)) // in 60 secs
+       })
+      }
     }
     // Side menu changes
     onSideMenuChange (isOpen: boolean) {
@@ -122,6 +165,50 @@ export default class BusDetail extends Component {
       }
 
     }
+    // Refresh State by received beacon data. use for beacon event listener.
+    refreshState(beaconData){
+      if(beaconData.beacons.length==0){
+        console.log('beacon data not received');
+      }else {
+        console.log('beacon data not received');
+        console.log(beaconData)
+        this.setState({
+         beaconId:beaconData.beacons[0].uuid,
+         beaconMajor:beaconData.beacons[0].major,
+         beaconMinor: beaconData.beacons[0].minor,
+         curStop:BusConstants.busStops[this.state.busName][parseInt(beaconData.beacons[0].minor,10)],
+         nextStop:BusConstants.busStops[this.state.busName][parseInt(beaconData.beacons[0].minor,10)+1],
+         remainStop:parseInt(this.state.dest,10) - parseInt(beaconData.beacons[0].minor,10),
+        });
+        if(this.state.remainStop<3){
+          if(this.state.remainStop==2 && !this.state.isNotified2){
+            // notify remain stop is 2
+            this.push1sec(this.state.isNotified2,"목적지까지 2 정거장 남았습니다.")
+            // and same notify no more
+            this.setState({isNotified2:!this.state.isNotified2})
+          }
+          if(this.state.remainStop==1 && !this.state.isNotified1){
+            // notify that next stop is destination
+            this.push1sec(this.state.isNotified1,"다음 정류장이 목적지입니다!")
+            // and same notify no more
+            this.setState({isNotified1:!this.state.isNotified1})
+          }
+        }
+      }
+    }
+    componentWillUnmount(){
+      // stop monitoring beacons:
+      Beacons.stopMonitoringForRegion();
+      // stop ranging beacons:
+      Beacons.stopRangingBeaconsInRegion();
+      // stop updating locationManager:
+      Beacons.stopUpdatingLocation();
+      // remove monitoring events we registered at componentDidMount
+      DeviceEventEmitter.removeListener('regionDidEnter');
+      DeviceEventEmitter.removeListener('regionDidExit');
+      // remove ranging event we registered at componentDidMount
+      DeviceEventEmitter.removeListener('beaconsDidRange');
+    }
     componentDidMount(){
       // setState - Bus Name
       this.setState({
@@ -137,90 +224,55 @@ export default class BusDetail extends Component {
       didEnter = DeviceEventEmitter.addListener(
         'regionDidEnter',
         (data) => {
-          if(data.beacons.length==0){
-            console.log('beacon data not received');
-          }else {
-            console.log('monitoring - didEnter');
-            console.log(data);
-            this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
-          }
+          console.log('monitoring - didEnter')
+          this.refreshState(data)
         }
       );
       // Event Listener - Beacon Region Exited
       didExit = DeviceEventEmitter.addListener(
         'regionDidExit',
-        ({ identifier, uuid, minor, major }) => {
-            if({ identifier, uuid, minor, major }==null){
-              console.log('beacon data not received');
-            }else {
-            console.log('monitoring - didExit data: ');
-            // good place for background tasks
-           //  console.log('monitoring - regionDidExit data: ', { identifier, uuid, minor, major });
-
-           //  const time = moment().format(TIME_FORMAT);
-          //  this.renderItems(data.beacons[0])
-           this.setState({
-             beaconId:data.beacons[0].uuid,
-             beaconMajor:data.beacons[0].major,
-             beaconMinor: data.beacons[0].minor,
-             curStop:BusConstants.busStops[this.state.busName][parseInt(data.beacons[0].minor,10)]
-           });
-
-          }
+        (data) => {
+          console.log('monitoring - didExit')
+          this.refreshState(data)
         }
       );
       didRange = DeviceEventEmitter.addListener(
         'beaconsDidRange',
         (data) => {
-          if(data.beacons.length==0){
-            console.log('beacon data not received');
-          }else {
-            // good place for background tasks
-            console.log('monitoring - didRange data: ');
-          //   this.setState({
-          //    dataSource :  this.state.dataSource.cloneWithRows(data.beacons),
-          //  });
-           this.setState({
-             beaconId:data.beacons[0].uuid,
-             beaconMajor:data.beacons[0].major,
-             beaconMinor: data.beacons[0].minor,
-             curStop:BusConstants.busStops[this.state.busName][parseInt(data.beacons[0].minor,10)],
-             nextStop:BusConstants.busStops[this.state.busName][parseInt(data.beacons[0].minor,10)+1],
-             remainStop:parseInt(dest,10) -  parseInt(data.beacons[0].minor,10),
-           });
-          }
+          console.log('monitoring - didRange')
+          this.refreshState(data)
         }
       );
      intervalId = BackgroundTimer.setInterval(() => {
        console.log('tics');
      }, 10000);
     }
-    refreshDest(dst){
-      this.setState({
-        dest:dst
-      })
-    }
-    renderStops(busStops){
-      // var busName = BusConstants.busName[parseInt(detectedBeacon.major,10)];
-      // var curStop = BusConstants.busStops[busName][parseInt(detectedBeacon.minor,10)]
-      var fontSz = 15
-      var fontWt = 'normal'
-      if(dest==busStops){
-        fontSz = 25,
-        fontWt = 'bold'
-      }
-      return(
-        <TouchableOpacity onPress={ () =>{
-          dest = busStops
-         }}>
-          <View style={{margin:5}}>
-            <Text style={{color:'#9e9e9e',fontSize:fontSz,fontWeight:fontWt}}>{busStops}</Text>
-          </View>
-          <View style={styles.separator}/>
-        </TouchableOpacity>
-
-      );
-    }
+    // refreshDest(dst){
+    //   this.setState({
+    //     dest:dst
+    //   })
+    // }
+    // renderStops(busStops){
+    //   // var busName = BusConstants.busName[parseInt(detectedBeacon.major,10)];
+    //   // var curStop = BusConstants.busStops[busName][parseInt(detectedBeacon.minor,10)]
+    //   var fontSz = 15
+    //   var fontWt = 'normal'
+    //   if(dest==busStops){
+    //     fontSz = 25,
+    //     fontWt = 'bold'
+    //   }
+    //   return(
+    //     <TouchableOpacity onPress={ () =>{
+    //       dest = busStops
+    //      }}>
+    //       <View style={{margin:5}}>
+    //         <Text style={{color:'#9e9e9e',fontSize:fontSz,fontWeight:fontWt}}>{busStops}</Text>
+    //       </View>
+    //       <View style={styles.separator}/>
+    //     </TouchableOpacity>
+    //
+    //   );
+    // }
   render() {
     // Side Menu Component
     const elList = BusConstants[(BusConstants.busName[parseInt(this.props.major,10)])]
@@ -250,7 +302,7 @@ export default class BusDetail extends Component {
           icon={{name: 'cached'}}
           title='BUTTON WITH ICON'
           onPress={()=>{
-            this.setState({isOpen:false})
+            this.toggleSideMenu()
           }}
           style={{marginBottom:10}}
           />
