@@ -10,3 +10,4 @@ Bus Notifier App using Beacon signal, which transferred by Raspberry Pi.
 + React native beacons manager, https://github.com/MacKentoch/react-native-beacons-manager
 + React native background timer, https://github.com/ocetnik/react-native-background-timer
 + React native push notification, https://github.com/zo0r/react-native-push-notification
++ React native Elements, https://github.com/react-native-training/react-native-elements

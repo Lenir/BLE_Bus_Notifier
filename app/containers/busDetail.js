@@ -10,7 +10,6 @@ import {
   DeviceEventEmitter,
   StyleSheet,
   Text,
-  Button,
   TextInput,
   Keyboard,
   View,
@@ -26,11 +25,21 @@ import {
 
 // imports - other APIs
 import {
+  Grid,
+  Col,
+  Row,
+  List,
+  ListItem,
+  SideMenu,
+  Button,
+} from 'react-native-elements';
+import {
   Scene,
   Router,
   Reducer,
   Actions,
-  ActionConst
+  ActionConst,
+  DefaultRenderer
 } from 'react-native-router-flux'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import PushNotification from 'react-native-push-notification'
@@ -41,6 +50,7 @@ import BackgroundTimer from 'react-native-background-timer'
 import BeaconConstants from './beaconConstants'
 import BusConstants from './busConstants'
 
+import DestSet from './destSet';
 
 var beaconId = BeaconConstants.identifier;
 var beaconUuid = BeaconConstants.uuid;
@@ -62,14 +72,31 @@ export default class BusDetail extends Component {
          beaconMinor : "",
          busName: "",
          curStop: "",
+         nextStop:"",
+         elList:'',
          dest:-1,
+         remainStop:-1,
+         isOpen: false,
          dataSource: new ListView.DataSource({
             rowHasChanged: (row1, row2) => row1 !== row2,
          }),
         }
+        this.toggleSideMenu = this.toggleSideMenu.bind(this)
     }
-
+    // Side menu changes
+    onSideMenuChange (isOpen: boolean) {
+      this.setState({
+        isOpen: isOpen
+      })
+    }
+    // Side menu toggle function
+    toggleSideMenu () {
+      this.setState({
+        isOpen: !this.state.isOpen
+      })
+    }
     componentWillMount(){
+
       const region = {
           identifier: beaconId,
           uuid: beaconUuid,
@@ -104,6 +131,8 @@ export default class BusDetail extends Component {
       this.setState({
        dataSource :  this.state.dataSource.cloneWithRows(BusConstants.busStops[BusConstants.busName[parseInt(this.props.major,10)]]),
      });
+     // setState - List
+     this.setState({elList:BusConstants.busStops[this.state.busName]})
       // Event Listener - Beacon Region Entered
       didEnter = DeviceEventEmitter.addListener(
         'regionDidEnter',
@@ -136,6 +165,7 @@ export default class BusDetail extends Component {
              beaconMinor: data.beacons[0].minor,
              curStop:BusConstants.busStops[this.state.busName][parseInt(data.beacons[0].minor,10)]
            });
+
           }
         }
       );
@@ -154,7 +184,9 @@ export default class BusDetail extends Component {
              beaconId:data.beacons[0].uuid,
              beaconMajor:data.beacons[0].major,
              beaconMinor: data.beacons[0].minor,
-             curStop:BusConstants.busStops[this.state.busName][parseInt(data.beacons[0].minor,10)]
+             curStop:BusConstants.busStops[this.state.busName][parseInt(data.beacons[0].minor,10)],
+             nextStop:BusConstants.busStops[this.state.busName][parseInt(data.beacons[0].minor,10)+1],
+             remainStop:parseInt(dest,10) -  parseInt(data.beacons[0].minor,10),
            });
           }
         }
@@ -182,7 +214,7 @@ export default class BusDetail extends Component {
           dest = busStops
          }}>
           <View style={{margin:5}}>
-            <Text style={{color:'#9e9e9e',fontSize:fontSz,fontWeight:fontWt}}>  {busStops}</Text>
+            <Text style={{color:'#9e9e9e',fontSize:fontSz,fontWeight:fontWt}}>{busStops}</Text>
           </View>
           <View style={styles.separator}/>
         </TouchableOpacity>
@@ -190,28 +222,89 @@ export default class BusDetail extends Component {
       );
     }
   render() {
-    console.log("Props", this.props, this.state);
-    return (
-      <View style={{alignItems:'center', justifyContent:'center',flex:1, flexDirection:'row'}}>
-        <View style={{alignItems:'center', justifyContent:'center',flex:1}}>
-          <Text style={{color:'#9e9e9e',fontSize:35,margin:20,marginTop:50}}>
-            {this.state.busName}
-          </Text>
-          <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginTop:20}}>dest:{dest}</Text>
-          <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginBottom:20}}>cur:{this.state.curStop}</Text>
-          <ScrollView>
-            <ListView
-              dataSource={this.state.dataSource}
-              renderRow={this.renderStops}
+    // Side Menu Component
+    const elList = BusConstants[(BusConstants.busName[parseInt(this.props.major,10)])]
+    const MenuComponent = (
+      <View style={{flex: 1, backgroundColor: '#ededed', paddingTop: 50}}>
+        <Text>
+          Dest : {this.state.dest}
+        </Text>
+        <ScrollView>
+        <List containerStyle={{marginBottom: 20}}>
+        {
+          elList.map((l, i) => (
+            <ListItem
+              onPress={() => {
+                this.setState({dest:i}),
+                this.toggleSideMenu()
+              }}
+              key={i}
+              title={l.name}
             />
-          </ScrollView>
-          <TouchableOpacity style={{margin:10}} onPress={ () =>{
-            Actions.pop()
-           }}>
-            <Ionicons size={30} name="ios-undo" color="#9e9e9e" />
-          </TouchableOpacity>
-        </View>
+          ))
+        }
+        </List>
+        </ScrollView>
+        <Button
+          raised
+          icon={{name: 'cached'}}
+          title='BUTTON WITH ICON'
+          onPress={()=>{
+            this.setState({isOpen:false})
+          }}
+          style={{marginBottom:10}}
+          />
       </View>
+    )
+    console.log("Props", this.props, this.state);
+    //testing elements-list
+    // const elList = [{name:"장전동어린이놀이터"},{name:"장전중앙교회"},{name:"부산대학교정문"},
+    // {name:"부산대학교후문"},{name:"금정초등학교"},{name:"온천장역"},{name:"온천장아스타아파트"}]
+
+    return (
+      <SideMenu
+        isOpen={this.state.isOpen}
+        onChange={this.onSideMenuChange.bind(this)}
+        menu={MenuComponent}>
+        <View style={styles.container}>
+          <Grid containerStyle={{alignItems:'center'}}>
+            <Col>
+              <Col containerStyle={{alignItems:'center'}}>
+                <Text style={{color:'#9e9e9e',fontSize:35,margin:20,marginTop:50}}>
+                  {this.state.busName}
+                </Text>
+              </Col>
+              <Col containerStyle={{alignItems:'center'}}>
+                <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginTop:20}}>dest:{this.state.dest}</Text>
+                <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginBottom:20}}>cur:{this.state.curStop}</Text>
+                <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginBottom:20}}>next:{this.state.nextStop}</Text>
+                <Text style={{color:'#9e9e9e',fontSize:15,margin:10,marginBottom:20}}>remain:{this.state.remainStop}</Text>
+              </Col>
+              <Col>
+                <Button
+                  raised
+                  icon={{name: 'cached'}}
+                  title='BUTTON WITH ICON'
+                  onPress={()=>{
+                    this.toggleSideMenu()
+                }}/>
+              </Col>
+              <Row>
+                <TouchableOpacity style={{margin:10}} onPress={ () =>{
+                  Actions.pop()
+                 }}>
+                  <Ionicons size={30} name="ios-undo" color="#9e9e9e" />
+                </TouchableOpacity>
+                <TouchableOpacity style={{margin:10}} onPress={ () =>{
+                  Actions.sideDrawer()
+                 }}>
+                  <Ionicons size={30} name="ios-undo" color="#9e9e9e" />
+                </TouchableOpacity>
+              </Row>
+            </Col>
+          </Grid>
+        </View>
+      </SideMenu>
     );
   }
 }
