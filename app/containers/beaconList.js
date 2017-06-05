@@ -35,6 +35,9 @@
    Actions,
    ActionConst
  } from 'react-native-router-flux'
+ import{
+   Icon,
+ } from 'react-native-elements'
  import Ionicons from 'react-native-vector-icons/Ionicons'
  import PushNotification from 'react-native-push-notification'
  import Beacons from 'react-native-beacons-manager'
@@ -220,7 +223,6 @@ export default class BeaconList extends Component {
     return(
       <TouchableOpacity onPress={ () =>{
         Actions.busDetail({
-          favStop: favStop,
           major : detectedBeacon.major,
         })
        }}>
@@ -242,14 +244,21 @@ export default class BeaconList extends Component {
     return (
       <View style={{alignItems:'center', justifyContent:'center',flex:1, flexDirection:'row'}}>
         <View style={{alignItems:'center', justifyContent:'center'}}>
-          <Text style={{color:'#9e9e9e',fontSize:35,margin:20,marginTop:50}}>
-            Beacon List
-          </Text>
-          <Ionicons size={150} name="ios-bluetooth" color="#9e9e9e" />
+          <Icon
+            raised
+            reverse
+            containerStyle={{marginTop:100,marginBottom:10}}
+            name='bluetooth-audio'
+            type='material-community'
+            color='#6ba1ff'
+            size={130}
+          />
+          <Text style={{color:'#6ba1ff',fontSize:20,margin:10}}>버스를 찾는 중입니다...</Text>
           <ScrollView>
             <ListView
               dataSource={this.state.dataSource}
               renderRow={this.renderItems}
+              enableEmptySections={true}
             />
           </ScrollView>
         </View>

@@ -14,6 +14,7 @@ var styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
+    marginBottom:0,
   },
   wrapper: {
     backgroundColor: 'white'

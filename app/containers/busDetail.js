@@ -14,8 +14,6 @@ import {
   DeviceEventEmitter,
   StyleSheet,
   Text,
-  TextInput,
-  Keyboard,
   View,
   Image,
   TouchableOpacity,
@@ -37,6 +35,7 @@ import {
   SideMenu,
   Button,
   Divider,
+  Icon,
 } from 'react-native-elements';
 import {
   Scene,
@@ -90,6 +89,7 @@ export default class BusDetail extends Component {
          elList: '',
          dest: -1,
          remainStop: -1,
+         remainIcon:"alarm-plus",
          favStop:this.props.favStop,
          remainMessage: "목적지가 정해지지 않았습니다.",
          progressPercent: 0,
@@ -219,15 +219,31 @@ export default class BusDetail extends Component {
             nextStop: "마지막 정류장 입니다."
           })
         }
+        if(this.state.remainStop<0){ // if Dest is not set
+          this.setState({
+            remainIcon:"alarm-plus"
+          })
+        }
         if(this.state.remainStop>0){ //if Dest is setted
+          if(this.state.remainStop>9){
+            this.setState({
+              remainIcon:"numeric-9-plus-box-multiple-outline"
+            })
+          }else{
+            this.setState({
+              remainIcon:"numeric-"+this.state.remainStop+"-box-multiple-outline"
+            })
+          }
           this.setState({
             remainMessage:"목적지까지 "+this.state.remainStop+"정류장 남았습니다.",
-            progressPercent: (parseInt(this.state.dest,10) - parseInt(this.state.startStop,10) - parseInt(this.state.remainStop,10))/(parseInt(this.state.dest,10) - parseInt(this.state.startStop,10))
+            progressPercent: (parseInt(this.state.dest,10) - parseInt(this.state.startStop,10) - parseInt(this.state.remainStop,10))/(parseInt(this.state.dest,10) - parseInt(this.state.startStop,10)),
           })
+          // Setting Remain stop icon
         }else if(this.state.remainStop==0){
           this.setState({
             remainMessage:"목적지에 도착하였습니다.",
-            progressPercent: (parseInt(this.state.dest,10) - parseInt(this.state.startStop,10) - parseInt(this.state.remainStop,10))/(parseInt(this.state.dest,10) - parseInt(this.state.startStop,10))
+            progressPercent: (parseInt(this.state.dest,10) - parseInt(this.state.startStop,10) - parseInt(this.state.remainStop,10))/(parseInt(this.state.dest,10) - parseInt(this.state.startStop,10)),
+            remainIcon:"numeric-"+this.state.remainStop+"-box-multiple-outline"
           })
         }
         if(this.state.remainStop<3){
@@ -405,30 +421,30 @@ export default class BusDetail extends Component {
         onChange={this.onSideMenuChange.bind(this)}
         menu={MenuComponent}>
         <View style={StyleCatalog.container}>
-          <Grid containerStyle={{alignItems:'center'}}>
+          <Grid containerStyle={{alignItems:'flex-end'}}>
             <Col containerStyle={{alignItems:'center'}}>
               <Col size={1}>
               </Col>
-              <Col containerStyle={{alignItems:'center'}} size={4}>
+              <Col size={4} containerStyle={{alignItems:'center'}}>
               <Button
                 large
                 icon={{name: 'bus', type: 'material-community'}}
                 backgroundColor='#c4dbff'
-                containerViewStyle={{width:330}}
+                containerViewStyle={{width:310}}
                 fontSize={35}
                 fontWeight='bold'
                 title= {this.state.busName+" 버스"} />
-                <Progress.Bar progress={this.state.progressPercent} borderWidth={0} unfilledColor={"#c4dbff"} width={330} height={10} color={"#9ec3ff"} borderRadius={0} />
+                <Progress.Bar progress={this.state.progressPercent} borderWidth={0} unfilledColor={"#c4dbff"} width={310} height={10} color={"#9ec3ff"} borderRadius={0} />
                 <Button
                   backgroundColor='#9ec3ff'
                   fontSize={15}
-                  containerViewStyle={{width:330}}
+                  containerViewStyle={{width:320}}
                   title= "이번 정류장" />
                 <Button
                   large
                   icon={{name: 'chevron-right', type: 'material-community'}}
                   backgroundColor='#9ec3ff'
-                  containerViewStyle={{width:330}}
+                  containerViewStyle={{width:320}}
                   fontSize={25}
                   fontWeight='bold'
                   title= {this.state.curStop} />
@@ -445,27 +461,38 @@ export default class BusDetail extends Component {
                   containerViewStyle={{width:330}}
                   title= {this.state.nextStop} />
                 <Button
-                  large
-                  icon={{name: 'alarm-check', type: 'material-community'}}
+                  disabled
+                  disabledStyle = {{backgroundColor:'#6ba1ff',}}
                   backgroundColor='#6ba1ff'
-                  containerViewStyle={{width:330}}
+                  fontSize={15}
+                  containerViewStyle={{width:340}}
+                  title= "남은 정류장" />
+                <Button
+                  large
+                  disabled
+                  disabledStyle = {{backgroundColor:'#6ba1ff',}}
+                  icon={{name:this.state.remainIcon, type: 'material-community'}}
+                  backgroundColor='#6ba1ff'
+                  containerViewStyle={{width:340}}
                   fontWeight='bold'
                   title= {this.state.remainMessage} />
                 <Button
-                  icon={{name: 'cached'}}
+                  large
+                  icon={{name: 'alarm-check', type: 'material-community'}}
                   title='목적지 설정'
-                  containerViewStyle={{width:330}}
+                  containerViewStyle={{width:350}}
                   backgroundColor='#245ab7'
                   onPress={()=>{
                     this.toggleSideMenu()
                   }}/>
-              </Col>
-              <Col size={1}>
-                <TouchableOpacity style={{margin:10}} onPress={ () =>{
-                  Actions.pop()
-                 }}>
-                  <Ionicons size={30} name="ios-undo" color="#9e9e9e" />
-                </TouchableOpacity>
+                  <Button
+                    icon={{name: 'undo', type: 'material-community'}}
+                    title='돌아가기'
+                    containerViewStyle={{width:360,height:100}}
+                    backgroundColor='#1c458c'
+                    onPress={()=>{
+                      Actions.pop()
+                    }}/>
               </Col>
             </Col>
           </Grid>
