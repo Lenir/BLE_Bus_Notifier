@@ -10,15 +10,12 @@
    ActivityIndicator,
    AsyncStorage,
    AppRegistry,
-   Animated,
    Alert,
    AlertIOS,
    DeviceEventEmitter,
    StyleSheet,
    Text,
    Button,
-   TextInput,
-   Keyboard,
    View,
    Image,
    TouchableOpacity,
@@ -42,6 +39,9 @@
  import PushNotification from 'react-native-push-notification'
  import Beacons from 'react-native-beacons-manager'
  import BackgroundTimer from 'react-native-background-timer'
+
+// imports - AsyncStorage function
+import AsyncStor from '../asyncStor'
 
 // imports - style sheet
 import StyleCatalog from '../styleCatalog'
@@ -107,12 +107,13 @@ export default class BeaconList extends Component {
      didEnter = DeviceEventEmitter.addListener(
        'regionDidEnter',
        (data) => {
-         if(data==null){
+         console.log('Did enter - ',data)
+         if(data==0){
            console.log('beacon data not received');
          }else {
            console.log('beacon data received');
            console.log(data);
-           this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
+          //  this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
          }
        }
      );
@@ -120,6 +121,7 @@ export default class BeaconList extends Component {
      didExit = DeviceEventEmitter.addListener(
        'regionDidExit',
        ({ identifier, uuid, minor, major }) => {
+         console.log('Did exit - ',identifier,uuid,major,minor);
          if({ identifier, uuid, minor, major }==null){
            console.log('beacon data not received');
          }else {
@@ -127,8 +129,8 @@ export default class BeaconList extends Component {
           //  console.log('monitoring - regionDidExit data: ', { identifier, uuid, minor, major });
 
           //  const time = moment().format(TIME_FORMAT);
-          this.renderItems(data.beacons[0])
-          this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
+          // this.renderItems(data.beacons[0])
+          this.setState({beaconId:uuid, beaconMajor:major, beaconMinor: minor});
         }
        }
      );
@@ -181,46 +183,6 @@ export default class BeaconList extends Component {
      // stop backgrond Timer
     //  BackgroundTimer.stop();
    }
-  // Async Storage Print - input : key, output : setState( printIten : OUTPUT )
-  printItem(){
-    try {
-      const value = AsyncStorage.getItem(this.state.inputKey,(err, result) => {
-        this.setState({printItem:result});
-        console.log(result);
-        if(result==null){
-          Alert.alert(
-            'Search Error',
-            'Cannot find with Inputted Key',
-            [
-              {text: 'OK'},
-            ]
-          )
-        }
-      })
-      } catch (error) {
-        Alert.alert(
-          'Search Error',
-          'Error Occurred within searching',
-          [
-            {text: 'OK'},
-          ]
-        )
-      }
-  }
-  // Async Storage Save - input : (key,item), output : none
-  saveItem(){
-    try {
-      AsyncStorage.setItem(this.state.inputKey,this.state.inputItem)
-    } catch (error) {
-      Alert.alert(
-        'Save Error',
-        'Error Occurred within saving Item',
-        [
-          {text: 'OK'},
-        ]
-      )
-    }
-  }
   // Rendering beacon List items - for debugging
   renderItemsDebug(detectedBeacon){
     var busName = BusConstants.busName[parseInt(detectedBeacon.major,10)];
@@ -258,6 +220,7 @@ export default class BeaconList extends Component {
     return(
       <TouchableOpacity onPress={ () =>{
         Actions.busDetail({
+          favStop: favStop,
           major : detectedBeacon.major,
         })
        }}>

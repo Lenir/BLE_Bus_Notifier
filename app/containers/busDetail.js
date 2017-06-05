@@ -55,6 +55,9 @@ import * as Progress from 'react-native-progress'
 // imports - style sheet
 import StyleCatalog from '../styleCatalog'
 
+// imports - Async Functions
+import AsyncStor from '../asyncStor'
+
 // imports - Constants
 import BeaconConstants from './beaconConstants'
 import BusConstants from './busConstants'
@@ -87,6 +90,7 @@ export default class BusDetail extends Component {
          elList: '',
          dest: -1,
          remainStop: -1,
+         favStop:this.props.favStop,
          remainMessage: "목적지가 정해지지 않았습니다.",
          progressPercent: 0,
          isOpen: false,
@@ -130,7 +134,7 @@ export default class BusDetail extends Component {
        requestPermissions: true,
        });
     }
-    // Push after 1 sec
+    // Push after 1 sec, when app is in Background running
     push1sec(isPushed,message) {
       if(!isPushed){
         PushNotification.localNotificationSchedule({
@@ -153,6 +157,16 @@ export default class BusDetail extends Component {
       })
     }
     componentWillMount(){
+      // setState - Bus Name
+      this.setState({
+        busName:BusConstants.busName[parseInt(this.props.major,10)]
+      })
+      // setState - Bus stops
+      this.setState({
+       dataSource :  this.state.dataSource.cloneWithRows(BusConstants.busStops[BusConstants.busName[parseInt(this.props.major,10)]]),
+      })
+      // setState - List
+      this.setState({elList:BusConstants.busStops[this.state.busName]})
 
       const region = {
           identifier: beaconId,
@@ -285,60 +299,77 @@ export default class BusDetail extends Component {
       BackgroundTimer.stop();
     }
     componentDidMount(){
-      // setState - Bus Name
-      this.setState({
-        busName:BusConstants.busName[parseInt(this.props.major,10)]
-      })
-      // setState - Bus stops
-      this.setState({
-       dataSource :  this.state.dataSource.cloneWithRows(BusConstants.busStops[BusConstants.busName[parseInt(this.props.major,10)]]),
-      })
-      // setState - List
-      this.setState({elList:BusConstants.busStops[this.state.busName]})
+      // Async Reset - for debugging
+      // AsyncStorage.setItem("8번","0000000")
+      // AsyncStorage.getItem("8번").then((value)=>{
+      //   console.log('Async reset - ',value)
+      // })
+
+
       // Event Listener - Beacon Region Entered
       didEnter = DeviceEventEmitter.addListener(
         'regionDidEnter',
         (data) => {
-          console.log('monitoring - didEnter')
-          this.refreshState(data)
+          if(data==null){
+            console.log('Did Enter - data null')
+          }else{
+            console.log('Did Enter - ',data)
+            this.refreshState(data)
+          }
         }
       );
       // Event Listener - Beacon Region Exited
       didExit = DeviceEventEmitter.addListener(
         'regionDidExit',
         (data) => {
-          console.log('monitoring - didExit')
-          this.refreshState(data)
+          if(data==null){
+            console.log('Did Exit - data null')
+          }else{
+            console.log('Did Exit - ',data)
+            // this.refreshState(data)
+          }
         }
       );
       didRange = DeviceEventEmitter.addListener(
         'beaconsDidRange',
         (data) => {
-          console.log('monitoring - didRange')
-          this.refreshState(data)
+          if(data.beacons.length==0){
+            console.log('Did Range - data null')
+          }else{
+            console.log('Did Range - ',data)
+            this.refreshState(data)
+          }
         }
       );
      intervalId = BackgroundTimer.setInterval(() => {
        console.log('tics');
      }, 10000);
+
+     // Get Favorite Stop in AsyncStorage
+     AsyncStorage.getItem(this.state.busName+"Fav").then((value)=>{
+       this.setState({
+         favStop: value
+       })
+     })
     }
   render() {
     // Side Menu Component
     const elList = BusConstants[(BusConstants.busName[parseInt(this.props.major,10)])]
     const MenuComponent = (
-      <View style={{flex: 1, backgroundColor: '#ededed', paddingTop: 50}}>
+      <View style={{flex: 1, backgroundColor: '#c4dbff', paddingTop: 50}}>
         <Text>
-          Dest : {this.state.dest}
+          자주 가는 정류장 {this.state.favStop}
         </Text>
         <ScrollView>
         <List containerStyle={{marginBottom: 20}}>
         {
           elList.map((l, i) => (
             <ListItem
-              onPress={() => {
+              onPress={ () => {
                 if(i>this.state.beaconMinor){
                   this.setState({dest:i}),
-                  this.toggleSideMenu()
+                  this.toggleSideMenu(),
+                  AsyncStor.addHistory(this.state.busName,i,elList.length)
                 }else{
                   // Cannot set destination behind of current stop
                   Alert.alert(
@@ -358,13 +389,12 @@ export default class BusDetail extends Component {
         </List>
         </ScrollView>
         <Button
-          raised
           icon={{name: 'cached'}}
-          title='BUTTON WITH ICON'
+          title='메뉴 닫기'
           onPress={()=>{
             this.toggleSideMenu()
           }}
-          style={{marginBottom:10}}
+          style={{marginBottom:30}}
           />
       </View>
     )
@@ -425,7 +455,7 @@ export default class BusDetail extends Component {
                   icon={{name: 'cached'}}
                   title='목적지 설정'
                   containerViewStyle={{width:330}}
-                  backgroundColor='#3d84ff'
+                  backgroundColor='#245ab7'
                   onPress={()=>{
                     this.toggleSideMenu()
                   }}/>
