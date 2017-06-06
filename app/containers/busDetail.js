@@ -81,6 +81,7 @@ export default class BusDetail extends Component {
          beaconId : "",
          beaconMajor : "",
          beaconMinor : "",
+         minorWas:-1,
          minorInt:-1,
          busName: "",
          curStop: "",
@@ -171,7 +172,7 @@ export default class BusDetail extends Component {
       // })
 
 
-
+      // Beacon Region Constant - UUID, Major Restricted
       const region = {
           identifier: beaconId,
           uuid: beaconUuid,
@@ -201,41 +202,32 @@ export default class BusDetail extends Component {
     refreshState(beaconData){
       if(beaconData.beacons.length==0){
         console.log('beacon data not received');
-      }else {
-        // console.log('beacon data received');
-        // console.log(beaconData)
+      }else { // beacon data received!
         if(!this.state.isStartSet){
           this.setState({ // Set the start stop
             startStop:beaconData.beacons[0].minor,
             isStartSet:true,
-          })
-        }
-        this.setState({
-        //  beaconId: beaconData.beacons[0].uuid,
-         beaconMajor: beaconData.beacons[0].major,
-         beaconMinor: beaconData.beacons[0].minor,
-         minorInt: parseInt(beaconData.beacons[0].minor,10),
-         curStop: this.state.elList[this.state.minorInt],
-         nextStop: BusConstants.busStops[this.state.busName][this.state.minorInt+1],
-        })
-        if(this.state.nextStop==null){
-          this.setState({
-            nextStop: "마지막 정류장 입니다."
+            beaconMajor: beaconData.beacons[0].major,
+            beaconMinor: beaconData.beacons[0].minor,
+            minorInt: parseInt(beaconData.beacons[0].minor,10),
+            curStop: this.state.elList[this.state.minorInt],
+            nextStop: BusConstants.busStops[this.state.busName][this.state.minorInt+1],
           })
         }
         if(this.state.dest>0){ //if Dest is setted
           this.setState({
+            minorInt: parseInt(beaconData.beacons[0].minor,10),
             remainStop: this.state.dest - this.state.minorInt,
-            remainMessage:"목적지까지 "+this.state.remainStop+"정류장 남았습니다.",
             progressPercent: (this.state.dest - this.state.startStop - parseInt(this.state.remainStop,10))/(this.state.dest - this.state.startStop),
           })
           if(this.state.remainStop>9){
             this.setState({
               remainIcon:"numeric-9-plus-box-multiple-outline"
             })
-          }else{
+          }else if(this.state.remainStop>0){
             this.setState({
-              remainIcon:"numeric-"+this.state.remainStop+"-box-multiple-outline"
+              remainIcon:"numeric-"+this.state.remainStop+"-box-multiple-outline",
+              remainMessage:"목적지까지 "+this.state.remainStop+"정류장 남았습니다.",
             })
           }
           // Setting Remain stop icon
@@ -245,27 +237,11 @@ export default class BusDetail extends Component {
           if(this.state.remainStop==2 && !this.state.isNotified2){
             // notify remain stop is 2
             this.push1sec(this.state.isNotified2,"목적지까지 2 정류장 남았습니다.")
-            // Foreground Alert
-            // Alert.alert(
-            //   '알림',
-            //   '목적지까지 2 정류장 남았습니다.',
-            //   [
-            //     {text:'확인'},
-            //   ]
-            // )
             // and same notify no more
             this.setState({isNotified2:!this.state.isNotified2})
           }else if(this.state.remainStop==1 && !this.state.isNotified1){
             // notify that next stop is destination
             this.push1sec(this.state.isNotified1,"다음 정류장이 목적지입니다!")
-            // Foreground Alert
-            // Alert.alert(
-            //   '알림',
-            //   '다음 정류장이 목적지입니다!',
-            //   [
-            //     {text:'확인'},
-            //   ]
-            // )
             // and same notify no more
             this.setState({isNotified1:!this.state.isNotified1})
           }else if(this.state.remainStop==0 && !this.state.isNotified0){
@@ -285,6 +261,31 @@ export default class BusDetail extends Component {
               remainMessage:"목적지에 도착하였습니다.",
               progressPercent: 1,})
           }
+        }
+        if(beaconData.beacons[0].minor == this.state.minorWas){
+          // if beacon minor value is not changed - do nothing
+        }else{ //if beacon minor value changed!
+          // console.log('beacon data received');
+          // console.log(beaconData)
+          this.setState({
+          //  beaconId: beaconData.beacons[0].uuid,
+           minorWas: beaconData.beacons[0].minor,
+           beaconMajor: beaconData.beacons[0].major,
+           beaconMinor: beaconData.beacons[0].minor,
+          //  remainMessage:"목적지까지 "+this.state.remainStop+"정류장 남았습니다.",
+           minorInt: parseInt(beaconData.beacons[0].minor,10),
+          })
+          this.setState({
+            curStop: this.state.elList[this.state.minorInt],
+            nextStop: BusConstants.busStops[this.state.busName][this.state.minorInt+1],
+          })
+          if(this.state.nextStop==null){ // if end of busStop List
+            this.setState({
+              nextStop: "마지막 정류장 입니다."
+            })
+          }
+
+
         }
       }
     }

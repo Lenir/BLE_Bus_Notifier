@@ -155,12 +155,9 @@ export default class BeaconList extends Component {
           this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
           if(data.beacons.length==1 && this.state.firstDetected){
             // when ranged beacon is just one, automatically go to bus information.
-            Beacons.stopRangingBeaconsInRegion(region)
-            DeviceEventEmitter.removeListener('beaconsDidRange')
             this.setState({
               firstDetected : false,
             })
-
             Actions.busDetail({
               major : data.beacons[0].major,
             })

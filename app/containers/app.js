@@ -32,7 +32,7 @@ export default class App extends Component {
     console.log("Props", this.props, this.state);
     return (
       //Router, Scenes
-        <Router >
+        <Router>
           <Scene key="root"  hideNavBar hideTabBar>
             <Scene key="beaconList" component={BeaconList} initial animation="fade" />
             <Scene key="busDetail" component={BusDetail} />
