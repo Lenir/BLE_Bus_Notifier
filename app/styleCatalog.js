@@ -22,7 +22,7 @@ var styles = StyleSheet.create({
   separator:{
     flex:1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#9E9E9E'
+    backgroundColor: '#5481ce'
   },
   button: {
     padding: 5,
@@ -33,6 +33,15 @@ var styles = StyleSheet.create({
     fontSize:40,
     margin:20,
     marginTop:50,
+  },
+  beaconListName:{
+    color:'#5481ce',
+    fontSize:17,
+    fontWeight:'bold'
+  },
+  beaconListItem:{
+    color:'#5481ce',
+    fontSize:16,
   }
 });
 

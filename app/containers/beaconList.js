@@ -155,9 +155,12 @@ export default class BeaconList extends Component {
           this.setState({beaconId:data.beacons[0].uuid, beaconMajor:data.beacons[0].major, beaconMinor: data.beacons[0].minor});
           if(data.beacons.length==1 && this.state.firstDetected){
             // when ranged beacon is just one, automatically go to bus information.
+            Beacons.stopRangingBeaconsInRegion(region)
+            DeviceEventEmitter.removeListener('beaconsDidRange')
             this.setState({
               firstDetected : false,
             })
+
             Actions.busDetail({
               major : data.beacons[0].major,
             })
@@ -169,7 +172,20 @@ export default class BeaconList extends Component {
       console.log('tics');
     }, 10000);
    }
+   stopBeacons(){
+     Beacons.stopMonitoringForRegion(region);
+     // stop ranging beacons:
+     Beacons.stopRangingBeaconsInRegion(region);
+     // stop updating locationManager:
+     Beacons.stopUpdatingLocation();
+     // remove monitoring events we registered at componentDidMount
+     DeviceEventEmitter.removeListener('regionDidEnter');
+     DeviceEventEmitter.removeListener('regionDidExit');
+     // remove ranging event we registered at componentDidMount
+     DeviceEventEmitter.removeListener('beaconsDidRange');
+   }
    componentWillUnmount(){
+     console.log('beaconList - component will unmount')
      // Stop Background work on Beacons
      // stop monitoring beacons:
      Beacons.stopMonitoringForRegion(region);
@@ -226,11 +242,11 @@ export default class BeaconList extends Component {
           major : detectedBeacon.major,
         })
        }}>
-        <View style={{margin:5}}>
-          <Text style={{color:'#9e9e9e',fontSize:15,fontWeight:'bold'}}>버스 번호</Text>
-          <Text style={{color:'#9e9e9e',fontSize:15}}>  {busName}</Text>
-          <Text style={{color:'#9e9e9e',fontSize:15,fontWeight:'bold'}}>현재 위치</Text>
-          <Text style={{color:'#9e9e9e',fontSize:15}}>  {curStop}</Text>
+        <View style={{margin:5,width:200}}>
+          <Text style={StyleCatalog.beaconListName}>버스 번호</Text>
+          <Text style={StyleCatalog.beaconListItem}>  {busName}</Text>
+          <Text style={StyleCatalog.beaconListName}>현재 위치</Text>
+          <Text style={StyleCatalog.beaconListItem}>  {curStop}</Text>
         </View>
         <View style={StyleCatalog.separator}/>
 
@@ -240,7 +256,7 @@ export default class BeaconList extends Component {
   }
 
   render() {
-    console.log("Props", this.props, this.state);
+    // console.log("Props", this.props, this.state);
     return (
       <View style={{alignItems:'center', justifyContent:'center',flex:1, flexDirection:'row'}}>
         <View style={{alignItems:'center', justifyContent:'center'}}>
@@ -254,7 +270,7 @@ export default class BeaconList extends Component {
             size={130}
           />
           <Text style={{color:'#6ba1ff',fontSize:20,margin:10}}>버스를 찾는 중입니다...</Text>
-          <ScrollView>
+          <ScrollView style={{margin:10}}>
             <ListView
               dataSource={this.state.dataSource}
               renderRow={this.renderItems}

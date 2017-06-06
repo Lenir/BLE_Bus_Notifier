@@ -19,8 +19,8 @@ import {
 //imports - Scenes
 import BeaconList from './beaconList'
 import BusDetail from './busDetail'
-import DestSet from './destSet'
-import SideDrawer from './sideDrawer'
+// import DestSet from './destSet'
+// import SideDrawer from './sideDrawer'
 
 //Main class.
 export default class App extends Component {
@@ -36,8 +36,6 @@ export default class App extends Component {
           <Scene key="root"  hideNavBar hideTabBar>
             <Scene key="beaconList" component={BeaconList} initial animation="fade" />
             <Scene key="busDetail" component={BusDetail} />
-            <Scene key="sideDrawer" component={SideDrawer} />
-            <Scene key="destSet" component={DestSet} />
           </Scene>
         </Router>
     );
